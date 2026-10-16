@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { hashPin } from "../../lib/pin";
+import { hashPin, hashPassword, getAdminSession } from "../../lib/pin";
 
 export default function AdminTenantsPage() {
+  const router = useRouter();
+  const [authed, setAuthed] = useState(false);
+  const [needSetup, setNeedSetup] = useState(false);
+  const [adminUser, setAdminUser] = useState("");
+  const [adminPw, setAdminPw] = useState("");
   const [rows, setRows] = useState([]);
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
@@ -19,8 +25,42 @@ export default function AdminTenantsPage() {
   }
 
   useEffect(() => {
-    load();
+    (async () => {
+      const db = supabase();
+      const { count } = await db.from("admins").select("id", { count: "exact", head: true });
+      if ((count || 0) === 0) {
+        setNeedSetup(true);
+        setAuthed(true);
+        load();
+        return;
+      }
+      const s = getAdminSession();
+      if (!s) {
+        router.push("/");
+        return;
+      }
+      setAuthed(true);
+      load();
+    })();
   }, []);
+
+  async function createFirstAdmin(e) {
+    e.preventDefault();
+    setMsg("");
+    if (!adminUser.trim() || adminPw.length < 4) {
+      setMsg("Username wajib + password min 4 karakter.");
+      return;
+    }
+    const db = supabase();
+    const h = await hashPassword(adminPw);
+    const { error } = await db.from("admins").insert({ username: adminUser.trim(), password_hash: h });
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setNeedSetup(false);
+    setMsg("Admin dibuat. Login lewat halaman utama mode Admin.");
+  }
 
   async function addTenant(e) {
     e.preventDefault();
@@ -49,6 +89,23 @@ export default function AdminTenantsPage() {
     setQris("");
     setMsg("Tenant tersimpan.");
     load();
+  }
+
+  if (!authed) return <main style={{ padding: 24 }}><p>Memeriksa sesi admin...</p></main>;
+
+  if (needSetup) {
+    return (
+      <main style={{ maxWidth: 420, margin: "10vh auto", padding: 24 }}>
+        <h1>Buat Admin Pertama</h1>
+        <p>Belum ada akun admin. Buat sekarang (cukup sekali).</p>
+        <form onSubmit={createFirstAdmin}>
+          <input placeholder="Username" value={adminUser} onChange={(e) => setAdminUser(e.target.value)} style={{ width: "100%", padding: 10, marginBottom: 8 }} />
+          <input type="password" placeholder="Password (min 4)" value={adminPw} onChange={(e) => setAdminPw(e.target.value)} style={{ width: "100%", padding: 10, marginBottom: 8 }} />
+          <button type="submit" style={{ padding: "10px 16px" }}>Buat Admin</button>
+        </form>
+        {msg && <p>{msg}</p>}
+      </main>
+    );
   }
 
   return (
