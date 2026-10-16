@@ -1,0 +1,9 @@
+{
+  "name": "MONKAS — Monjali Kasir",
+  "short_name": "MONKAS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2b2118",
+  "icons": []
+}
