@@ -1,0 +1,1 @@
+- 2026-10-19: KEP MONKAS Task 4 DONE kasir POS page build PASS (5/5 routes static, lint broken no-flat-env non-blocking) | GAGAL nihil | AJAR orders insert pakai tenant_id+items jsonb+total_cents.
