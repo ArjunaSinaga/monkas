@@ -13,6 +13,7 @@ export default function KasirPage() {
   const [cart, setCart] = useState([]);
   const [saving, setSaving] = useState(false);
   const [checkout, setCheckout] = useState(null);
+  const [ai, setAi] = useState(null);
 
   useEffect(() => {
     const s = getSession();
@@ -33,6 +34,30 @@ export default function KasirPage() {
       setLoading(false);
     })();
   }, [router]);
+
+  // Panggil AI tiap request. Debounce 1,2 detik supaya perubahan keranjang
+  // yang beruntun tidak memicu banyak panggilan (hemat token + tagihan).
+  useEffect(() => {
+    if (!tenant) return undefined;
+    const items = cart
+      .map((x) => `${x.product_name}${x.variant_name ? ' ' + x.variant_name : ''} x${x.qty}`)
+      .join(', ');
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const qs = new URLSearchParams({ intent: 'kasir', tenant: tenant.name || '', items });
+        const res = await fetch('/api/ai?' + qs.toString(), { signal: controller.signal });
+        if (!res.ok) return;
+        setAi(await res.json());
+      } catch (err) {
+        if (err?.name !== 'AbortError') console.error('AI gagal:', err);
+      }
+    }, 1200);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [tenant, cart]);
 
   const addToCart = (product, variant) => {
     const key = vkey(product.id, variant?.id);
@@ -112,6 +137,18 @@ export default function KasirPage() {
           Keluar
         </button>
       </header>
+
+      {ai && (
+        <div style={{ marginTop: 12, border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, background: '#f9fafb', fontSize: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+            <span style={{ color: '#374151' }}>{aiLabel(ai)}</span>
+            <span style={{ color: '#6b7280', fontSize: 12, whiteSpace: 'nowrap' }}>
+              {ai.source}
+              {ai.costUsd ? ' - $' + ai.costUsd : ''}
+            </span>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p>Memuat produk…</p>
@@ -196,4 +233,11 @@ export default function KasirPage() {
 
 function vkey(pid, vid) {
   return pid + (vid ? '::' + vid : '');
+}
+
+function aiLabel(ai) {
+  if (ai.tip) return 'Saran AI: ' + ai.tip;
+  if (ai.reason === 'no-key') return 'AI belum aktif. Set OPENAI_API_KEY di .env.local.';
+  if (ai.reason === 'budget') return 'Batas budget AI tercapai, panggilan dilewati.';
+  return 'Panggilan AI gagal (' + (ai.reason || 'error') + '). Kasir tetap normal.';
 }
