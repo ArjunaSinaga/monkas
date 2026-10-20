@@ -1,1 +1,2 @@
 - 2026-10-19: KEP MONKAS Task 4 DONE kasir POS page build PASS (5/5 routes static, lint broken no-flat-env non-blocking) | GAGAL nihil | AJAR orders insert pakai tenant_id+items jsonb+total_cents.
+- 2026-10-20: KEP fitur AI per request DONE (lib/openai.js guard biaya: cache TTL 10m, dedupe, budget 60/jam + $1/proses, timeout 8s, retry 2x, fallback degraded, akuntansi USD; app/api/ai/route.js; panel saran AI di /kasir; scripts/mock-openai.mjs) | GAGAL live call belum terverifikasi (tanpa OPENAI_API_KEY) | AJAR guard biaya wajib dari awal, bukan nanti.
