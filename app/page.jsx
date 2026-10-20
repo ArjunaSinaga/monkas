@@ -115,8 +115,8 @@ export default function LoginPage() {
         />
         <input
           type="password"
-          inputMode={mode === "tenant" ? "numeric" : "text"}
-          placeholder={mode === "admin" ? "Password admin" : "PIN tenant (4-6 angka)"}
+          inputMode="numeric"
+          placeholder={mode === "admin" ? "PIN admin (6 angka)" : "PIN tenant (4-6 angka)"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={{ width: "100%", padding: 12, fontSize: 16 }}

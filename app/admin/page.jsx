@@ -137,7 +137,7 @@ export default function AdminTenantsPage() {
     const { error } = await db.from("admins").update({ password_hash: nh }).eq("id", adm.id);
     if (error) { setMsg("Gagal: " + error.message); return; }
     setCurPw(""); setNewPw(""); setNewPw2("");
-    setMsg("Password admin diubah. Pakai yang baru di login berikutnya.");
+    setMsg("PIN admin diubah. Pakai PIN baru di login berikutnya.");
   }
 
   async function loadProducts(tid) {
@@ -293,7 +293,7 @@ export default function AdminTenantsPage() {
   if (needSetup) {
     return (
       <main style={{ maxWidth: 420, margin: "10vh auto", padding: 16 }}>
-        <h2>Buat Admin Pertama</h2>
+        <h2>Buat Admin Pertama (PIN 6 angka)</h2>
         <p>Belum ada akun admin. Buat sekarang (cukup sekali).</p>
         <form onSubmit={createFirstAdmin}>
           <input
@@ -323,35 +323,35 @@ export default function AdminTenantsPage() {
       <h1>Kelola Tenant</h1>
       <Link href="/">← Kembali ke login</Link>
       <section style={{ border: "1px solid #ccc", padding: 16, marginBottom: 16 }}>
-        <h2>Ubah Password Admin</h2>
+        <h2>Ubah PIN Admin</h2>
         <p style={{ fontSize: 13, color: "#6f6252" }}>
           Boleh pure PIN 6 angka, atau password minimal 8 karakter. PIN lebih lemah:
           jangan dipakai buat data uang sungguhan sebelum rate limit server-side aktif (F0b).
         </p>
         <form onSubmit={changeAdminPw}>
           <input
-            placeholder="Password lama"
+            placeholder="PIN lama (6 angka)"
             type="password"
             value={curPw}
             onChange={(e) => setCurPw(e.target.value)}
             style={{ width: "100%", padding: 12, marginBottom: 8 }}
           />
           <input
-            placeholder="Password baru (6 angka atau 8+ karakter)"
+            placeholder="PIN baru (6 angka)"
             type="password"
             value={newPw}
             onChange={(e) => setNewPw(e.target.value)}
             style={{ width: "100%", padding: 12, marginBottom: 8 }}
           />
           <input
-            placeholder="Ulangi password baru"
+            placeholder="Ulangi PIN baru"
             type="password"
             value={newPw2}
             onChange={(e) => setNewPw2(e.target.value)}
             style={{ width: "100%", padding: 12, marginBottom: 8 }}
           />
           <button type="submit" style={{ width: "100%", padding: 12 }}>
-            Simpan Password Baru
+            Simpan PIN Baru
           </button>
         </form>
       </section>
