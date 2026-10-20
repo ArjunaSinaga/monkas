@@ -11,58 +11,81 @@ const LOCK_MS = 5 * 60 * 1000;
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState("admin");
   const router = useRouter();
+
+  function noteFail() {
+    try {
+      const rec = JSON.parse(localStorage.getItem(FAIL_KEY) || "null") || { n: 0, until: 0 };
+      rec.n = (rec.n || 0) + 1;
+      if (rec.n >= MAX_FAIL) {
+        rec.until = Date.now() + LOCK_MS;
+        rec.n = 0;
+      }
+      localStorage.setItem(FAIL_KEY, JSON.stringify(rec));
+    } catch {}
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!username.trim() || !password) {
-      setError("Username dan password wajib diisi.");
+    if (!username.trim() || !pin) {
+      setError("Username dan PIN wajib diisi.");
+      return;
+    }
+    // Lockout: 5x gagal -> kunci 5 menit
+    try {
+      const rec = JSON.parse(localStorage.getItem(FAIL_KEY) || "null");
+      if (rec && rec.until && Date.now() < rec.until) {
+        const sisa = Math.ceil((rec.until - Date.now()) / 1000);
+        setError("Terlalu banyak percobaan. Coba lagi dalam " + sisa + " detik.");
+        return;
+      }
+    } catch {}
+    if (!/^\d{4,6}$/.test(pin)) {
+      setError("PIN harus 4-6 angka.");
       return;
     }
     setError("");
     setBusy(true);
     try {
       const db = supabase();
+      const name = username.trim();
 
-      // 1. Coba sebagai admin
-      const ah = await hashPassword(password);
+      // 1. Admin? (username admin + PIN 6 angka)
+      const ah = await hashPassword(pin);
       const { data: admin, error: aErr } = await db
         .from("admins")
         .select("id,username")
-        .eq("username", username.trim())
+        .eq("username", name)
         .eq("password_hash", ah)
         .limit(1)
         .maybeSingle();
       if (aErr) throw aErr;
-      try { localStorage.removeItem(FAIL_KEY); } catch {}
       if (admin) {
+        try { localStorage.removeItem(FAIL_KEY); } catch {}
         setAdminSession({ admin_id: admin.id, username: admin.username, login_at: Date.now() });
         router.push("/admin");
         return;
       }
 
-      // 2. Coba sebagai tenant (username = nama tenant, password = PIN)
-      if (!/^\d{4,6}$/.test(password)) {
-        setError("Username atau password salah.");
-        return;
-      }
-      const ph = await hashPin(password);
+      // 2. Tenant? (nama tenant + PIN)
+      const ph = await hashPin(pin);
       const { data: tenant, error: tErr } = await db
         .from("tenants")
         .select("id,name")
-        .eq("name", username.trim())
+        .eq("name", name)
         .eq("pin_hash", ph)
         .limit(1)
         .maybeSingle();
       if (tErr) throw tErr;
       if (!tenant) {
-        setError("Username atau password salah.");
+        noteFail();
+        setError("Username atau PIN salah.");
         return;
       }
+      try { localStorage.removeItem(FAIL_KEY); } catch {}
       setSession({ tenant_id: tenant.id, tenant_name: tenant.name, login_at: Date.now() });
       router.push("/kasir");
     } catch (err) {
@@ -73,53 +96,30 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="page">
+    <main className="page" style={{ maxWidth: 380, paddingTop: "12vh" }}>
       <h1>MONKAS</h1>
-      <p style={{ color: "#6f6252", fontSize: 14, marginTop: 4 }}>
-        {mode === "admin"
-          ? "Masuk sebagai admin untuk mendaftarkan tenant dan mengatur produk."
-          : "Masuk sebagai tenant (kafe) untuk memakai mesin kasir."}
+      <p className="muted" style={{ marginTop: 4 }}>
+        Monjali Kasir - masuk dengan username + PIN. Admin dan tenant memakai form yang sama.
       </p>
-      <div style={{ display: "flex", gap: 8, margin: "12px 0" }}>
-        <button
-          type="button"
-          onClick={() => { setMode("admin"); setError(""); }}
-          style={{
-            flex: 1, padding: "10px 12px", borderRadius: 10, cursor: "pointer", fontWeight: 600,
-            border: "1px solid " + (mode === "admin" ? "#3d2c1e" : "#e8e0cf"),
-            background: mode === "admin" ? "#3d2c1e" : "#fff",
-            color: mode === "admin" ? "#fff" : "#2b2118",
-          }}
-        >
-          Admin
-        </button>
-        <button
-          type="button"
-          onClick={() => { setMode("tenant"); setError(""); }}
-          style={{
-            flex: 1, padding: "10px 12px", borderRadius: 10, cursor: "pointer", fontWeight: 600,
-            border: "1px solid " + (mode === "tenant" ? "#3d2c1e" : "#e8e0cf"),
-            background: mode === "tenant" ? "#3d2c1e" : "#fff",
-            color: mode === "tenant" ? "#fff" : "#2b2118",
-          }}
-        >
-          Tenant (Kafe)
-        </button>
-      </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="stack" style={{ marginTop: 20 }}>
         <input
-          placeholder={mode === "admin" ? "Username admin" : "Nama tenant (kafe)"}
+          className="field"
+          placeholder="Username admin atau nama tenant"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          style={{ width: "100%", padding: 12, fontSize: 16, marginBottom: 8 }}
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
         />
         <input
+          className="field"
           type="password"
           inputMode="numeric"
-          placeholder={mode === "admin" ? "PIN admin (6 angka)" : "PIN tenant (4-6 angka)"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ width: "100%", padding: 12, fontSize: 16 }}
+          maxLength={6}
+          placeholder="PIN (4-6 angka)"
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          autoComplete="current-password"
         />
         {error && <p className="msg msg-error">{error}</p>}
         <button type="submit" className="btn btn-primary btn-block" disabled={busy}>

@@ -99,7 +99,13 @@ export default function AdminTenantsPage() {
     if (!qris.trim()) {
       setMsg("Foto QRIS belum diisi (boleh kosong dulu, bisa diisi nanti).");
     }
+    // Validasi: nama tenant unik + tidak boleh sama dengan username admin
+    // (kalau sama, login auto-deteksi akan salah masuk sebagai admin)
     const db = supabase();
+    const { data: dupTenant } = await db.from("tenants").select("id").eq("name", name.trim()).maybeSingle();
+    if (dupTenant) { setMsg("Nama tenant sudah dipakai."); return; }
+    const { data: adminNameRow } = await db.from("admins").select("id").eq("username", name.trim()).maybeSingle();
+    if (adminNameRow) { setMsg("Nama tenant tidak boleh sama dengan username admin."); return; }
     const h = hashPin(pin.trim());
     const { error } = await db.from("tenants").insert({
       name: name.trim(),
