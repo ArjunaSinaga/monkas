@@ -2,10 +2,24 @@
 App kasir standalone multitenant, 1 QRIS bersama manual. Terpisah dari kerja.inc.
 
 ## Migrasi database
-File SQL ada di `supabase/migrations/`. Cara apply (pilih salah satu):
+File SQL ada di `supabase/migrations/`. Urutan apply: `001_core.sql` -> `002_admins.sql` -> `003_products_category.sql`.
 
-- Dashboard Supabase > SQL Editor > tempel isi file > Run.
-- CLI: `supabase link --project-ref <ref>` lalu `supabase db push`.
+Project monkas: `kfpfgmbuansfggxdqitd` (dashboard: https://supabase.com/dashboard/project/kfpfgmbuansfggxdqitd).
+
+Cara apply (pilih salah satu):
+
+- Dashboard Supabase > SQL Editor > tempel isi file > Run (satu file satu Run).
+- CLI: `supabase link --project-ref kfpfgmbuansfggxdqitd` lalu `supabase db push`.
+- Management API tanpa CLI (butuh PAT dari https://supabase.com/dashboard/account/tokens):
+
+```powershell
+$env:SUPABASE_ACCESS_TOKEN = "sbp_..."
+Invoke-RestMethod -Method Post `
+  -Uri "https://api.supabase.com/v1/projects/kfpfgmbuansfggxdqitd/database/query" `
+  -Headers @{ Authorization = "Bearer $env:SUPABASE_ACCESS_TOKEN"; "Content-Type" = "application/json" } `
+  -Body (@{ query = (Get-Content supabase/migrations/003_products_category.sql -Raw) } | ConvertTo-Json)
+```
+
 
 Migrasi baru (status "sudah dijalankan" di project live belum diverifikasi):
 
