@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
-import { hashPin, hashPassword, getAdminSession } from "../../lib/pin";
+import { hashPin, hashPassword, getAdminSession, checkAdminPasswordPolicy } from "../../lib/pin";
 
 const CATEGORIES = ["Minuman", "Makanan"];
 
@@ -27,6 +27,10 @@ export default function AdminTenantsPage() {
   const [pCategory, setPCategory] = useState(CATEGORIES[0]);
   const [editing, setEditing] = useState(null);
   const [vForms, setVForms] = useState({});
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [newPw2, setNewPw2] = useState("");
+  const [adminName, setAdminName] = useState("");
 
   useEffect(() => {
     async function checkSetup() {
@@ -53,6 +57,8 @@ export default function AdminTenantsPage() {
   }, [router]);
 
   async function load() {
+    const as = getAdminSession();
+    if (as && as.username) setAdminName(as.username);
     const db = supabase();
     const { data } = await db
       .from("tenants")
@@ -115,6 +121,23 @@ export default function AdminTenantsPage() {
         " (catat dan kasih ke merchant - PIN tidak bisa dibaca lagi karena disimpan sebagai hash)."
     );
     load();
+  }
+
+  async function changeAdminPw(e) {
+    e.preventDefault();
+    const err = checkAdminPasswordPolicy(newPw);
+    if (err) { setMsg(err); return; }
+    if (newPw !== newPw2) { setMsg("Konfirmasi password tidak sama."); return; }
+    const db = supabase();
+    const { data: adm } = await db.from("admins").select("id,password_hash").eq("username", adminName).maybeSingle();
+    if (!adm) { setMsg("Akun admin tidak ditemukan."); return; }
+    const cur = await hashPassword(curPw);
+    if (cur !== adm.password_hash) { setMsg("Password lama salah."); return; }
+    const nh = await hashPassword(newPw);
+    const { error } = await db.from("admins").update({ password_hash: nh }).eq("id", adm.id);
+    if (error) { setMsg("Gagal: " + error.message); return; }
+    setCurPw(""); setNewPw(""); setNewPw2("");
+    setMsg("Password admin diubah. Pakai yang baru di login berikutnya.");
   }
 
   async function loadProducts(tid) {
@@ -299,6 +322,39 @@ export default function AdminTenantsPage() {
     <main style={{ maxWidth: 560, margin: "5vh auto", padding: 16 }}>
       <h1>Kelola Tenant</h1>
       <Link href="/">← Kembali ke login</Link>
+      <section style={{ border: "1px solid #ccc", padding: 16, marginBottom: 16 }}>
+        <h2>Ubah Password Admin</h2>
+        <p style={{ fontSize: 13, color: "#6f6252" }}>
+          Boleh pure PIN 6 angka, atau password minimal 8 karakter. PIN lebih lemah:
+          jangan dipakai buat data uang sungguhan sebelum rate limit server-side aktif (F0b).
+        </p>
+        <form onSubmit={changeAdminPw}>
+          <input
+            placeholder="Password lama"
+            type="password"
+            value={curPw}
+            onChange={(e) => setCurPw(e.target.value)}
+            style={{ width: "100%", padding: 12, marginBottom: 8 }}
+          />
+          <input
+            placeholder="Password baru (6 angka atau 8+ karakter)"
+            type="password"
+            value={newPw}
+            onChange={(e) => setNewPw(e.target.value)}
+            style={{ width: "100%", padding: 12, marginBottom: 8 }}
+          />
+          <input
+            placeholder="Ulangi password baru"
+            type="password"
+            value={newPw2}
+            onChange={(e) => setNewPw2(e.target.value)}
+            style={{ width: "100%", padding: 12, marginBottom: 8 }}
+          />
+          <button type="submit" style={{ width: "100%", padding: 12 }}>
+            Simpan Password Baru
+          </button>
+        </form>
+      </section>
       <section style={{ border: "1px solid #ccc", padding: 16, marginBottom: 16 }}>
         <h2>Tambah Tenant</h2>
         <form onSubmit={addTenant}>

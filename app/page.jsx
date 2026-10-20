@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { hashPin, hashPassword, setSession, setAdminSession } from "../lib/pin";
 
+const FAIL_KEY = "monkas_login_fail";
+const MAX_FAIL = 5;
+const LOCK_MS = 5 * 60 * 1000;
+
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +38,7 @@ export default function LoginPage() {
         .limit(1)
         .maybeSingle();
       if (aErr) throw aErr;
+      try { localStorage.removeItem(FAIL_KEY); } catch {}
       if (admin) {
         setAdminSession({ admin_id: admin.id, username: admin.username, login_at: Date.now() });
         router.push("/admin");
