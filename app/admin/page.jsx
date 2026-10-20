@@ -327,7 +327,7 @@ export default function AdminTenantsPage() {
   return (
     <main className="page">
       <h1>Kelola Tenant</h1>
-      <Link href="/">← Kembali ke login</Link>
+      <Link href="/" className="btn btn-sm" style={{ alignSelf: "flex-start" }}>Kembali ke login</Link>
       <section className="card">
         <h2>Ubah PIN Admin</h2>
         <p style={{ fontSize: 13, color: "#6f6252" }}>
