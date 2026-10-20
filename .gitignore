@@ -1,3 +1,7 @@
 node_modules/
 .next/
 .env*.local
+
+# auto-generated Next.js 16 (next dev)
+AGENTS.md
+CLAUDE.md
