@@ -292,7 +292,7 @@ export default function AdminTenantsPage() {
 
   if (needSetup) {
     return (
-      <main style={{ maxWidth: 420, margin: "10vh auto", padding: 16 }}>
+      <main className="page">
         <h2>Buat Admin Pertama (PIN 6 angka)</h2>
         <p>Belum ada akun admin. Buat sekarang (cukup sekali).</p>
         <form onSubmit={createFirstAdmin}>
@@ -309,20 +309,20 @@ export default function AdminTenantsPage() {
             placeholder="Password (min 4 karakter)"
             style={{ width: "100%", padding: 10, marginBottom: 8 }}
           />
-          <button type="submit" style={{ padding: "10px 16px" }}>
+          <button type="submit" className="btn btn-primary btn-block">
             Buat Admin
           </button>
         </form>
-        {msg && <p>{msg}</p>}
+        {msg && <p className="msg">{msg}</p>}
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 560, margin: "5vh auto", padding: 16 }}>
+    <main className="page">
       <h1>Kelola Tenant</h1>
       <Link href="/">← Kembali ke login</Link>
-      <section style={{ border: "1px solid #ccc", padding: 16, marginBottom: 16 }}>
+      <section className="card">
         <h2>Ubah PIN Admin</h2>
         <p style={{ fontSize: 13, color: "#6f6252" }}>
           Boleh pure PIN 6 angka, atau password minimal 8 karakter. PIN lebih lemah:
@@ -350,12 +350,12 @@ export default function AdminTenantsPage() {
             onChange={(e) => setNewPw2(e.target.value)}
             style={{ width: "100%", padding: 12, marginBottom: 8 }}
           />
-          <button type="submit" style={{ width: "100%", padding: 12 }}>
+          <button type="submit" className="btn btn-primary btn-block">
             Simpan PIN Baru
           </button>
         </form>
       </section>
-      <section style={{ border: "1px solid #ccc", padding: 16, marginBottom: 16 }}>
+      <section className="card">
         <h2>Tambah Tenant</h2>
         <form onSubmit={addTenant}>
           <input
@@ -377,12 +377,12 @@ export default function AdminTenantsPage() {
             placeholder="URL foto QRIS (wajib)"
             style={{ width: "100%", padding: 10, marginBottom: 8 }}
           />
-          <button type="submit" style={{ padding: "10px 16px" }}>
+          <button type="submit" className="btn btn-primary btn-block">
             Simpan
           </button>
         </form>
       </section>
-      {msg && <p>{msg}</p>}
+      {msg && <p className="msg">{msg}</p>}
       <h2>Daftar ({rows.length})</h2>
       <ul>
         {rows.map((t) => (
@@ -392,7 +392,7 @@ export default function AdminTenantsPage() {
         ))}
       </ul>
       {tenantId !== null && (
-        <section style={{ border: "1px solid #ccc", padding: 16 }}>
+        <section className="card">
           <h2>Produk</h2>
           <form onSubmit={addProduct}>
             <input
@@ -419,7 +419,7 @@ export default function AdminTenantsPage() {
                 </option>
               ))}
             </select>
-            <button type="submit" style={{ padding: "10px 16px" }}>
+            <button type="submit" className="btn btn-primary btn-block">
               Tambah
             </button>
           </form>
@@ -429,23 +429,17 @@ export default function AdminTenantsPage() {
                 {p.name} — Rp{(p.price_cents / 100).toLocaleString("id-ID")}{" "}
                 {p.category ? "[" + p.category + "]" : ""}{" "}
                 {p.is_active ? "" : "(mati)"}
-                <button
-                  type="button"
-                  onClick={() => toggleProduct(p)}
+                <button className="btn btn-sm" type="button" onClick={() => toggleProduct(p)}
                   style={{ padding: "4px 8px", marginLeft: 6 }}
                 >
                   {p.is_active ? "Matikan" : "Aktifkan"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => startEdit(p)}
+                <button className="btn btn-sm" type="button" onClick={() => startEdit(p)}
                   style={{ padding: "4px 8px", marginLeft: 6 }}
                 >
                   Edit
                 </button>
-                <button
-                  type="button"
-                  onClick={() => delProduct(p)}
+                <button className="btn btn-sm" type="button" onClick={() => delProduct(p)}
                   style={{ padding: "4px 8px", marginLeft: 6 }}
                 >
                   Hapus
@@ -482,12 +476,10 @@ export default function AdminTenantsPage() {
                         </option>
                       ))}
                     </select>
-                    <button type="submit" style={{ padding: "6px 10px" }}>
+                    <button type="submit" className="btn btn-primary btn-block">
                       Simpan
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditing(null)}
+                    <button className="btn btn-sm" type="button" onClick={() => setEditing(null)}
                       style={{ padding: "6px 10px" }}
                     >
                       Batal
@@ -501,9 +493,7 @@ export default function AdminTenantsPage() {
                       <li key={v.id}>
                         {v.name} (Rp
                         {(v.price_delta_cents / 100).toLocaleString("id-ID")})
-                        <button
-                          type="button"
-                          onClick={() => delVariant(v)}
+                        <button className="btn btn-sm" type="button" onClick={() => delVariant(v)}
                           style={{ padding: "2px 6px", marginLeft: 6 }}
                         >
                           x
@@ -540,7 +530,7 @@ export default function AdminTenantsPage() {
                     inputMode="numeric"
                     style={{ padding: 6, marginRight: 6 }}
                   />
-                  <button type="submit" style={{ padding: "6px 10px" }}>
+                  <button type="submit" className="btn btn-primary btn-block">
                     + Varian
                   </button>
                 </form>

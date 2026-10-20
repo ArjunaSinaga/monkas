@@ -73,7 +73,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ maxWidth: 360, margin: "10vh auto", padding: 24 }}>
+    <main className="page">
       <h1>MONKAS</h1>
       <p style={{ color: "#6f6252", fontSize: 14, marginTop: 4 }}>
         {mode === "admin"
@@ -121,8 +121,8 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           style={{ width: "100%", padding: 12, fontSize: 16 }}
         />
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        <button type="submit" disabled={busy} style={{ width: "100%", padding: 12, marginTop: 12 }}>
+        {error && <p className="msg msg-error">{error}</p>}
+        <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
           {busy ? "Memeriksa..." : "Masuk"}
         </button>
       </form>

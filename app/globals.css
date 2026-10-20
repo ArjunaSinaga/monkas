@@ -1,0 +1,292 @@
+/* MONKAS - design tokens + base (sinkron dengan docs/USER-VISUAL-BUKTI.md) */
+
+:root {
+  /* warna */
+  --canvas: #f5f1e8;
+  --surface: #ffffff;
+  --surface-sunken: #faf7ef;
+  --border: #e8e0cf;
+  --border-strong: #d8cfba;
+  --text: #2b2118;
+  --text-muted: #6f6252;
+  --text-faint: #857768;
+  --cta: #3d2c1e;
+  --cta-hover: #4a382a;
+  --accent: #9a6a2f;
+  --accent-soft: #b56a2a;
+  --success: #1f6b4a;
+  --danger: #b42318;
+  --focus: #2b6cb0;
+
+  /* bentuk */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-pill: 999px;
+
+  /* jarak (skala 4) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  --shadow: 0 1px 3px rgba(43, 33, 24, 0.08);
+  --shadow-lg: 0 8px 24px rgba(43, 33, 24, 0.1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text);
+  font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--focus);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--accent);
+}
+
+::selection {
+  background: #e6d9bd;
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- primitif form: satu lebar, satu gaya, satu radius --- */
+
+.field {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field::placeholder {
+  color: var(--text-faint);
+}
+
+.field:hover {
+  border-color: var(--border-strong);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.12);
+}
+
+select.field {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) calc(50% + 2px), calc(100% - 12px) calc(50% + 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-sunken);
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  color: #fff;
+  background: var(--cta);
+  border-color: var(--cta);
+}
+
+.btn-primary:hover {
+  background: var(--cta-hover);
+  border-color: var(--cta-hover);
+}
+
+.btn-danger {
+  color: var(--danger);
+  border-color: #e8c4bf;
+}
+
+.btn-danger:hover {
+  background: #fdf1f0;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* --- kontainer --- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s4);
+  box-shadow: var(--shadow);
+}
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--s5) var(--s4) var(--s7);
+}
+
+.page-wide {
+  max-width: 1180px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.stack-sm {
+  gap: var(--s2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+.msg {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+}
+
+.msg-error {
+  color: var(--danger);
+  background: #fdf1f0;
+  border-color: #e8c4bf;
+}
+
+.msg-ok {
+  color: var(--success);
+  background: #f0f6f2;
+  border-color: #cfe3d7;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.price {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- tabel harga produk & daftar --- */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list > li {
+  padding: 10px 0;
+  border-bottom: 1px solid #f0ebe0;
+}
+
+/* --- responsif: tablet & HP --- */
+
+@media (max-width: 760px) {
+  .page {
+    padding: var(--s4) var(--s3) var(--s6);
+  }
+
+  .page-wide {
+    padding: var(--s3);
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+}

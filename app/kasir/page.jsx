@@ -134,7 +134,7 @@ export default function KasirPage() {
           <h1 style={{ fontSize: 24, margin: 0 }}>Kasir — {tenant.name}</h1>
           <p style={{ color: '#666', margin: '4px 0 0' }}>Klik produk untuk menambah ke keranjang.</p>
         </div>
-        <button
+        <button className="btn btn-sm"
           onClick={() => {
             clearSession();
             router.replace('/');
@@ -170,7 +170,7 @@ export default function KasirPage() {
                   <strong>{p.name}</strong>
                   <div style={{ color: '#666', fontSize: 13 }}>{fmt(p.price_cents)}</div>
                 </div>
-                <button
+                <button className="btn btn-sm"
                   onClick={() => addToCart(p, null)}
                   style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#154c57', color: '#fff', cursor: 'pointer' }}
                 >
@@ -205,15 +205,15 @@ export default function KasirPage() {
                 {x.variant_name ? ` — ${x.variant_name}` : ''} × {fmt(x.unit_cents)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button onClick={() => setQty(x.key, x.qty - 1)} style={{ width: 28, borderRadius: 6, border: '1px solid #ccc', cursor: 'pointer' }}>−</button>
+                <button className="btn btn-sm" onClick={() => setQty(x.key, x.qty - 1)} style={{ width: 28, borderRadius: 6, border: '1px solid #ccc', cursor: 'pointer' }}>−</button>
                 <span style={{ minWidth: 20, textAlign: 'center' }}>{x.qty}</span>
-                <button onClick={() => setQty(x.key, x.qty + 1)} style={{ width: 28, borderRadius: 6, border: '1px solid #ccc', cursor: 'pointer' }}>+</button>
+                <button className="btn btn-sm" onClick={() => setQty(x.key, x.qty + 1)} style={{ width: 28, borderRadius: 6, border: '1px solid #ccc', cursor: 'pointer' }}>+</button>
               </div>
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: '1px solid #ddd' }}>
             <strong>Total: {fmt(totalCents)}</strong>
-            <button
+            <button className="btn btn-sm"
               onClick={pay}
               disabled={saving}
               style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: saving ? '#888' : '#154c57', color: '#fff', cursor: saving ? 'wait' : 'pointer' }}
@@ -229,7 +229,7 @@ export default function KasirPage() {
         <div style={{ marginTop: 24, border: '1px solid #ccc', borderRadius: 12, padding: 16, background: '#f4fafb' }}>
           <strong>Pesanan #{checkout.id.slice(-6).toUpperCase()} tersimpan.</strong>
           <div>Total {fmt(checkout.total_cents)}</div>
-          <button onClick={() => setCheckout(null)} style={{ marginTop: 8, padding: '6px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
+          <button className="btn btn-sm" onClick={() => setCheckout(null)} style={{ marginTop: 8, padding: '6px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
             Tutup
           </button>
         </div>
