@@ -196,6 +196,156 @@ select.field {
   width: 100%;
 }
 
+.btn-icon {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .btn-sm,
+  .btn-icon {
+    min-height: 44px;
+  }
+
+  .btn-icon {
+    min-width: 44px;
+  }
+}
+
+/* --- grid kotak (homepage admin) --- */
+
+.kotak-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--s4);
+}
+
+.kotak {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kotak:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+.kotak:active {
+  transform: scale(0.98);
+}
+
+.kotak-judul {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.kotak-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.kotak-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin-top: var(--s2);
+  padding-top: var(--s2);
+  border-top: 1px solid #f0ebe0;
+  font-size: 12px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.kotak-ikon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+
+/* --- popup / modal --- */
+
+.popup-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 33, 24, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s4);
+  z-index: 50;
+}
+
+.popup-kartu {
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: var(--s5);
+}
+
+.popup-kartu-lebar {
+  max-width: 760px;
+}
+
+.popup-kepala {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+}
+
+.popup-judul {
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
+@media (max-width: 640px) {
+  .kotak-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .popup-scrim {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .popup-kartu {
+    max-width: none;
+    border-radius: 16px 16px 0 0;
+    padding: var(--s4);
+    max-height: 92vh;
+  }
+}
+
 /* --- kontainer --- */
 
 .card {
