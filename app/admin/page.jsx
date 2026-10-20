@@ -6,6 +6,8 @@ import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { hashPin, hashPassword, getAdminSession } from "../../lib/pin";
 
+const CATEGORIES = ["Minuman", "Makanan"];
+
 export default function AdminTenantsPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
@@ -22,6 +24,8 @@ export default function AdminTenantsPage() {
   const [variants, setVariants] = useState([]);
   const [pName, setPName] = useState("");
   const [pPrice, setPPrice] = useState("");
+  const [pCategory, setPCategory] = useState(CATEGORIES[0]);
+  const [editing, setEditing] = useState(null);
   const [vForms, setVForms] = useState({});
 
   useEffect(() => {
@@ -110,11 +114,19 @@ export default function AdminTenantsPage() {
 
   async function loadProducts(tid) {
     const db = supabase();
-    const { data: prods } = await db
+    const { data: prods, error: prodErr } = await db
       .from("products")
-      .select("id,name,price_cents,is_active,created_at")
+      .select("id,name,price_cents,category,is_active,created_at")
       .eq("tenant_id", tid)
       .order("created_at");
+    if (prodErr) {
+      // Kolom category belum ada di DB = migrasi 003 belum dijalankan.
+      setMsg("Gagal memuat produk: " + prodErr.message);
+      setProducts([]);
+      setVariants([]);
+      setVForms({});
+      return;
+    }
     setProducts(prods || []);
     const ids = (prods || []).map((p) => p.id);
     if (!ids.length) {
@@ -150,6 +162,7 @@ export default function AdminTenantsPage() {
       tenant_id: tenantId,
       name: pName.trim(),
       price_cents: cents,
+      category: pCategory,
     });
     if (error) {
       setMsg("Gagal: " + error.message);
@@ -157,6 +170,41 @@ export default function AdminTenantsPage() {
     }
     setPName("");
     setPPrice("");
+    setPCategory(CATEGORIES[0]);
+    loadProducts(tenantId);
+  }
+
+  function startEdit(p) {
+    setEditing({
+      id: p.id,
+      name: p.name,
+      price: String(p.price_cents / 100),
+      category: p.category || CATEGORIES[0],
+    });
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    const cents = Math.round(parseFloat(editing.price || "0") * 100);
+    if (!editing.name.trim() || isNaN(cents) || cents < 0) {
+      setMsg("Nama & harga produk wajib diisi (harga >= 0).");
+      return;
+    }
+    const db = supabase();
+    const { error } = await db
+      .from("products")
+      .update({
+        name: editing.name.trim(),
+        price_cents: cents,
+        category: editing.category,
+      })
+      .eq("id", editing.id);
+    if (error) {
+      setMsg("Gagal: " + error.message);
+      return;
+    }
+    setEditing(null);
+    setMsg("Produk diperbarui.");
     loadProducts(tenantId);
   }
 
@@ -299,6 +347,17 @@ export default function AdminTenantsPage() {
               inputMode="numeric"
               style={{ width: "100%", padding: 10, marginBottom: 8 }}
             />
+            <select
+              value={pCategory}
+              onChange={(e) => setPCategory(e.target.value)}
+              style={{ width: "100%", padding: 10, marginBottom: 8 }}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
             <button type="submit" style={{ padding: "10px 16px" }}>
               Tambah
             </button>
@@ -307,6 +366,7 @@ export default function AdminTenantsPage() {
             {products.map((p) => (
               <li key={p.id}>
                 {p.name} — Rp{(p.price_cents / 100).toLocaleString("id-ID")}{" "}
+                {p.category ? "[" + p.category + "]" : ""}{" "}
                 {p.is_active ? "" : "(mati)"}
                 <button
                   type="button"
@@ -317,11 +377,62 @@ export default function AdminTenantsPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => startEdit(p)}
+                  style={{ padding: "4px 8px", marginLeft: 6 }}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
                   onClick={() => delProduct(p)}
                   style={{ padding: "4px 8px", marginLeft: 6 }}
                 >
                   Hapus
                 </button>
+                {editing && editing.id === p.id && (
+                  <form onSubmit={saveEdit} style={{ marginTop: 8 }}>
+                    <input
+                      value={editing.name}
+                      onChange={(e) =>
+                        setEditing({ ...editing, name: e.target.value })
+                      }
+                      placeholder="Nama produk"
+                      style={{ padding: 6, marginRight: 6 }}
+                    />
+                    <input
+                      value={editing.price}
+                      onChange={(e) =>
+                        setEditing({ ...editing, price: e.target.value })
+                      }
+                      placeholder="Harga (Rp)"
+                      inputMode="numeric"
+                      style={{ padding: 6, marginRight: 6 }}
+                    />
+                    <select
+                      value={editing.category}
+                      onChange={(e) =>
+                        setEditing({ ...editing, category: e.target.value })
+                      }
+                      style={{ padding: 6, marginRight: 6 }}
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="submit" style={{ padding: "6px 10px" }}>
+                      Simpan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(null)}
+                      style={{ padding: "6px 10px" }}
+                    >
+                      Batal
+                    </button>
+                  </form>
+                )}
                 <ul>
                   {variants
                     .filter((v) => v.product_id === p.id)
