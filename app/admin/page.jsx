@@ -499,9 +499,7 @@ export default function AdminTenantsPage() {
                       <li key={v.id}>
                         {v.name} (Rp
                         {(v.price_delta_cents / 100).toLocaleString("id-ID")})
-                        <button className="btn btn-sm" type="button" onClick={() => delVariant(v)}
-                          style={{ padding: "2px 6px", marginLeft: 6 }}
-                        >
+                        <button className="btn btn-icon" type="button" onClick={() => delVariant(v)} title="Hapus varian">
                           x
                         </button>
                       </li>
