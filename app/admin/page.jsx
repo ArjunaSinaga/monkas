@@ -91,15 +91,14 @@ export default function AdminTenantsPage() {
       return;
     }
     if (!qris.trim()) {
-      setMsg("Foto QRIS wajib diisi (URL foto).");
-      return;
+      setMsg("Foto QRIS belum diisi (boleh kosong dulu, bisa diisi nanti).");
     }
     const db = supabase();
     const h = hashPin(pin.trim());
     const { error } = await db.from("tenants").insert({
       name: name.trim(),
       pin_hash: h,
-      qris_photo_url: qris.trim(),
+      qris_photo_url: qris.trim() || null,
     });
     if (error) {
       setMsg("Gagal: " + error.message);
@@ -108,7 +107,13 @@ export default function AdminTenantsPage() {
     setName("");
     setPin("");
     setQris("");
-    setMsg("Tenant tersimpan.");
+    setMsg(
+      "Tenant '" +
+        name.trim() +
+        "' tersimpan. PIN: " +
+        pin.trim() +
+        " (catat dan kasih ke merchant - PIN tidak bisa dibaca lagi karena disimpan sebagai hash)."
+    );
     load();
   }
 

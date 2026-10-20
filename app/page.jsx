@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState("admin");
   const router = useRouter();
 
   async function handleSubmit(e) {
@@ -69,17 +70,48 @@ export default function LoginPage() {
   return (
     <main style={{ maxWidth: 360, margin: "10vh auto", padding: 24 }}>
       <h1>MONKAS</h1>
-      <p>Monjali Kasir — masuk dengan username + password.</p>
+      <p style={{ color: "#6f6252", fontSize: 14, marginTop: 4 }}>
+        {mode === "admin"
+          ? "Masuk sebagai admin untuk mendaftarkan tenant dan mengatur produk."
+          : "Masuk sebagai tenant (kafe) untuk memakai mesin kasir."}
+      </p>
+      <div style={{ display: "flex", gap: 8, margin: "12px 0" }}>
+        <button
+          type="button"
+          onClick={() => { setMode("admin"); setError(""); }}
+          style={{
+            flex: 1, padding: "10px 12px", borderRadius: 10, cursor: "pointer", fontWeight: 600,
+            border: "1px solid " + (mode === "admin" ? "#3d2c1e" : "#e8e0cf"),
+            background: mode === "admin" ? "#3d2c1e" : "#fff",
+            color: mode === "admin" ? "#fff" : "#2b2118",
+          }}
+        >
+          Admin
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMode("tenant"); setError(""); }}
+          style={{
+            flex: 1, padding: "10px 12px", borderRadius: 10, cursor: "pointer", fontWeight: 600,
+            border: "1px solid " + (mode === "tenant" ? "#3d2c1e" : "#e8e0cf"),
+            background: mode === "tenant" ? "#3d2c1e" : "#fff",
+            color: mode === "tenant" ? "#fff" : "#2b2118",
+          }}
+        >
+          Tenant (Kafe)
+        </button>
+      </div>
       <form onSubmit={handleSubmit}>
         <input
-          placeholder="Username"
+          placeholder={mode === "admin" ? "Username admin" : "Nama tenant (kafe)"}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           style={{ width: "100%", padding: 12, fontSize: 16, marginBottom: 8 }}
         />
         <input
           type="password"
-          placeholder="Password"
+          inputMode={mode === "tenant" ? "numeric" : "text"}
+          placeholder={mode === "admin" ? "Password admin" : "PIN tenant (4-6 angka)"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={{ width: "100%", padding: 12, fontSize: 16 }}
