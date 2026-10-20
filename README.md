@@ -30,6 +30,11 @@ Migrasi baru (status "sudah dijalankan" di project live belum diverifikasi):
 Kolom `category` dipakai halaman `/admin`. Kalau migrasi belum dijalankan, halaman admin
 menampilkan pesan error saat memuat produk.
 
+Validasi lokal (PostgreSQL 18.4, bukan project live): `001` -> `002` -> `003` jalan tanpa
+error, kolom `category` terbentuk (`text not null default 'Minuman'`), index
+`(tenant_id, category)` ada, baris lama otomatis dapat default `Minuman`, dan `003` aman
+dijalankan ulang.
+
 
 ## Fitur: AI per request (OpenAI)
 
