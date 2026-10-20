@@ -21,18 +21,25 @@ export default function KasirPage() {
       router.replace('/');
       return;
     }
-    setTenant(s);
+    // setState di dalam callback async, bukan langsung di body effect
+    // (aturan react-hooks/set-state-in-effect di Next 16).
+    let cancelled = false;
     (async () => {
+      setTenant(s);
       const { data, error } = await supabase()
         .from('products')
         .select('id, name, price_cents, is_active, variants(id, name, price_delta_cents)')
         .eq('tenant_id', s.id)
         .eq('is_active', true)
         .order('name');
+      if (cancelled) return;
       if (!error && data) setProducts(data);
       else if (error) console.error(error);
       setLoading(false);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   // Panggil AI tiap request. Debounce 1,2 detik supaya perubahan keranjang
