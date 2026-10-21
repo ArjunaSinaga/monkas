@@ -44,6 +44,10 @@ export default function AdminPage() {
   const [orders, setOrders] = useState([]);
   const [produk, setProduk] = useState([]);
   const [tenantAktif, setTenantAktif] = useState(null);
+  // konfirmasi 3 lapis: nonaktifkan tenant
+  const [konfirmasi, setKonfirmasi] = useState(null);
+  const [konNama, setKonNama] = useState("");
+  const [konPin, setKonPin] = useState("");
 
   // form tambah tenant
   const [nama, setNama] = useState("");
@@ -113,16 +117,56 @@ export default function AdminPage() {
     await muatTenant();
   }
 
-  // ---------- nonaktifkan / pulihkan tenant ----------
-  async function toggleTenant(t) {
+  // ---------- nonaktifkan tenant (konfirmasi 3 lapis) ----------
+  // Lapis 1: klik tombol Nonaktifkan
+  // Lapis 2: ketik ulang nama tenant persis
+  // Lapis 3: masukkan PIN admin (6 angka)
+  // Hasil: soft delete (is_active=false + deleted_at). Riwayat order tetap utuh.
+  async function nonaktifkanTenant(e) {
+    e.preventDefault();
+    const t = konfirmasi;
+    if (!t) return;
+    if (konNama.trim() !== t.name) {
+      setMsg("Nama tenant tidak cocok. Ketik ulang persis: " + t.name);
+      return;
+    }
+    if (!/^\d{6}$/.test(konPin.trim())) {
+      setMsg("PIN admin harus 6 angka.");
+      return;
+    }
     const db = supabase();
-    const next = !t.is_active;
+    const { data: adm } = await db
+      .from("admins")
+      .select("id,password_hash")
+      .eq("username", adminName)
+      .maybeSingle();
+    if (!adm) { setMsg("Akun admin tidak ditemukan."); return; }
+    const hash = await hashPassword(konPin.trim());
+    if (hash !== adm.password_hash) {
+      setMsg("PIN admin salah.");
+      return;
+    }
     const { error } = await db
       .from("tenants")
-      .update({ is_active: next, deleted_at: next ? new Date().toISOString() : null })
+      .update({ is_active: false, deleted_at: new Date().toISOString() })
       .eq("id", t.id);
     if (error) { setMsg("Gagal: " + error.message); return; }
-    setMsg(next ? "Tenant '" + t.name + "' dinonaktifkan. Bisa dipulihkan di daftar nonaktif." : "Tenant '" + t.name + "' dipulihkan.");
+    setKonfirmasi(null);
+    setKonNama("");
+    setKonPin("");
+    setMsg("Tenant '" + t.name + "' dinonaktifkan. Bisa dipulihkan di daftar nonaktif.");
+    await muatTenant();
+  }
+
+  // ---------- pulihkan tenant ----------
+  async function pulihkanTenant(t) {
+    const db = supabase();
+    const { error } = await db
+      .from("tenants")
+      .update({ is_active: true, deleted_at: null })
+      .eq("id", t.id);
+    if (error) { setMsg("Gagal: " + error.message); return; }
+    setMsg("Tenant '" + t.name + "' dipulihkan.");
     await muatTenant();
   }
 
@@ -230,6 +274,57 @@ export default function AdminPage() {
       {/* ---------- popup tenant ---------- */}
       <Popup open={popup === "tenant"} judul="Tenant" lebar onClose={() => setPopup(null)}>
         {msg && <p className="msg">{msg}</p>}
+
+        {konfirmasi ? (
+          <form onSubmit={nonaktifkanTenant} className="stack-sm">
+            <p className="muted">
+              Langkah 2 dari 3. Ketik ulang nama tenant persis, lalu masukkan PIN admin
+              (6 angka) untuk mengonfirmasi.
+            </p>
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <span className="muted">Tenant yang akan dinonaktifkan</span>
+              <span style={{ fontWeight: 650 }}>{konfirmasi.name}</span>
+            </div>
+            <input
+              className="field"
+              placeholder={"Ketik ulang: " + konfirmasi.name}
+              value={konNama}
+              onChange={(e) => setKonNama(e.target.value)}
+              autoComplete="off"
+            />
+            <input
+              className="field"
+              placeholder="PIN admin (6 angka)"
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={konPin}
+              onChange={(e) => setKonPin(e.target.value.replace(/\D/g, ""))}
+              autoComplete="off"
+            />
+            <div className="row" style={{ gap: 8 }}>
+              <button type="submit" className="btn btn-danger">
+                Ya, nonaktifkan
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setKonfirmasi(null);
+                  setKonNama("");
+                  setKonPin("");
+                }}
+              >
+                Batal
+              </button>
+            </div>
+            <p className="muted">
+              Data transaksi tidak dihapus. Tenant bisa dipulihkan kapan saja dari daftar
+              nonaktif.
+            </p>
+          </form>
+        ) : (
+          <>
         <div>
           <h3 style={{ fontSize: 15, marginBottom: 8 }}>Tenant aktif ({aktif.length})</h3>
           {!siap && <p className="muted">Memuat data tenant...</p>}
@@ -255,7 +350,16 @@ export default function AdminPage() {
                   <button type="button" className="btn btn-sm" onClick={() => resetPinTenant(t)}>
                     Reset PIN
                   </button>
-                  <button type="button" className="btn btn-sm btn-danger" onClick={() => toggleTenant(t)}>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger"
+                    onClick={() => {
+                      setMsg("");
+                      setKonNama("");
+                      setKonPin("");
+                      setKonfirmasi(t);
+                    }}
+                  >
                     Nonaktifkan
                   </button>
                 </div>
@@ -271,7 +375,7 @@ export default function AdminPage() {
               {nonaktif.map((t) => (
                 <li key={t.id} className="row" style={{ justifyContent: "space-between" }}>
                   <div style={{ fontWeight: 600, color: "var(--text-muted)" }}>{t.name}</div>
-                  <button type="button" className="btn btn-sm" onClick={() => toggleTenant(t)}>
+                  <button type="button" className="btn btn-sm" onClick={() => pulihkanTenant(t)}>
                     Pulihkan
                   </button>
                 </li>
@@ -279,7 +383,10 @@ export default function AdminPage() {
             </ul>
           </div>
         )}
+          </>
+        )}
 
+        {!konfirmasi && (
         <form onSubmit={tambahTenant} className="stack-sm" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
           <h3 style={{ fontSize: 15 }}>Tambah tenant</h3>
           <input className="field" placeholder="Nama tenant (kafe)" value={nama} onChange={(e) => setNama(e.target.value)} />
@@ -287,6 +394,7 @@ export default function AdminPage() {
           <input className="field" placeholder="URL foto QRIS (opsional)" value={qris} onChange={(e) => setQris(e.target.value)} />
           <button type="submit" className="btn btn-primary">Simpan Tenant</button>
         </form>
+        )}
       </Popup>
 
       {/* ---------- popup ganti pin ---------- */}
