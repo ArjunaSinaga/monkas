@@ -200,7 +200,7 @@ export default function AdminPage() {
         <Kotak
           judul="Tenant"
           deskripsi="Daftar tenant, tambah tenant, nonaktifkan, reset PIN."
-          meta={aktif.length + " aktif" + (nonaktif.length ? " - " + nonaktif.length + " nonaktif" : "")}
+          meta={siap ? aktif.length + " aktif" + (nonaktif.length ? " - " + nonaktif.length + " nonaktif" : "") : "memuat..."}
           ikon={<IconTenant />}
           onClick={() => { setMsg(""); setPopup("tenant"); }}
         />
@@ -214,14 +214,14 @@ export default function AdminPage() {
         <Kotak
           judul="Laporan"
           deskripsi="Omzet dan jumlah transaksi per tenant."
-          meta={laporan.length + " tenant ada transaksi"}
+          meta={siap ? laporan.length + " tenant ada transaksi" : "memuat..."}
           ikon={<IconLaporan />}
           onClick={() => { setMsg(""); setPopup("laporan"); }}
         />
         <Kotak
           judul="Tutup Hari"
           deskripsi="Rekap hari ini, kunci, dan unduh rekap CSV."
-          meta={hariIniOrders.length + " transaksi hari ini"}
+          meta={siap ? hariIniOrders.length + " transaksi hari ini" : "memuat..."}
           ikon={<IconTutup />}
           onClick={() => { setMsg(""); setPopup("tutup"); }}
         />
@@ -232,7 +232,8 @@ export default function AdminPage() {
         {msg && <p className="msg">{msg}</p>}
         <div>
           <h3 style={{ fontSize: 15, marginBottom: 8 }}>Tenant aktif ({aktif.length})</h3>
-          {aktif.length === 0 && <p className="muted">Belum ada tenant.</p>}
+          {!siap && <p className="muted">Memuat data tenant...</p>}
+          {siap && aktif.length === 0 && <p className="muted">Belum ada tenant.</p>}
           <ul className="list">
             {aktif.map((t) => (
               <li key={t.id} className="row" style={{ justifyContent: "space-between" }}>
