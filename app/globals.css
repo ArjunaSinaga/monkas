@@ -425,7 +425,29 @@ select.field {
   border-bottom: 1px solid #f0ebe0;
 }
 
+.kasir-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--s4);
+  align-items: start;
+}
+
+.kasir-keranjang {
+  position: sticky;
+  top: var(--s4);
+}
+
 /* --- responsif: tablet & HP --- */
+
+@media (max-width: 1000px) {
+  .kasir-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kasir-keranjang {
+    position: static;
+  }
+}
 
 @media (max-width: 760px) {
   .page {

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
-import { getSession, clearSession } from '../../lib/pin';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../lib/supabase";
+import { getSession, clearSession } from "../../lib/pin";
 
 export default function KasirPage() {
   const router = useRouter();
@@ -14,50 +14,44 @@ export default function KasirPage() {
   const [saving, setSaving] = useState(false);
   const [checkout, setCheckout] = useState(null);
   const [ai, setAi] = useState(null);
+  const [q, setQ] = useState("");
+  const [kat, setKat] = useState("Semua");
 
   useEffect(() => {
     const s = getSession();
     if (!s) {
-      router.replace('/');
+      router.replace("/");
       return;
     }
-    // setState di dalam callback async, bukan langsung di body effect
-    // (aturan react-hooks/set-state-in-effect di Next 16).
-    let cancelled = false;
     (async () => {
+      // setState di dalam callback async (aturan react-hooks/set-state-in-effect Next 16)
       setTenant(s);
       const { data, error } = await supabase()
-        .from('products')
-        .select('id, name, price_cents, is_active, variants(id, name, price_delta_cents)')
-        .eq('tenant_id', s.id)
-        .eq('is_active', true)
-        .order('name');
-      if (cancelled) return;
+        .from("products")
+        .select("id, name, price_cents, is_active, variants(id, name, price_delta_cents)")
+        .eq("tenant_id", s.id)
+        .eq("is_active", true)
+        .order("name");
       if (!error && data) setProducts(data);
-      else if (error) console.error(error);
       setLoading(false);
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [router]);
 
-  // Panggil AI tiap request. Debounce 1,2 detik supaya perubahan keranjang
-  // yang beruntun tidak memicu banyak panggilan (hemat token + tagihan).
+  // Saran AI: dipanggil tiap request, debounce 1,2 detik (hemat token + tagihan)
   useEffect(() => {
     if (!tenant) return undefined;
     const items = cart
-      .map((x) => `${x.product_name}${x.variant_name ? ' ' + x.variant_name : ''} x${x.qty}`)
-      .join(', ');
+      .map((x) => `${x.product_name}${x.variant_name ? " " + x.variant_name : ""} x${x.qty}`)
+      .join(", ");
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const qs = new URLSearchParams({ intent: 'kasir', tenant: tenant.name || '', items });
-        const res = await fetch('/api/ai?' + qs.toString(), { signal: controller.signal });
+        const qs = new URLSearchParams({ intent: "kasir", tenant: tenant.name || "", items });
+        const res = await fetch("/api/ai?" + qs.toString(), { signal: controller.signal });
         if (!res.ok) return;
         setAi(await res.json());
       } catch (err) {
-        if (err?.name !== 'AbortError') console.error('AI gagal:', err);
+        if (err?.name !== "AbortError") console.error("AI gagal:", err);
       }
     }, 1200);
     return () => {
@@ -65,6 +59,8 @@ export default function KasirPage() {
       controller.abort();
     };
   }, [tenant, cart]);
+
+  const vkey = (pid, vid) => pid + "::" + (vid || "none");
 
   const addToCart = (product, variant) => {
     const key = vkey(product.id, variant?.id);
@@ -97,22 +93,23 @@ export default function KasirPage() {
   };
 
   const totalCents = cart.reduce((t, x) => t + x.unit_cents * x.qty, 0);
+  const fmt = (c) => "Rp" + Number(c || 0).toLocaleString("id-ID");
 
   const pay = async () => {
     if (cart.length === 0) return;
     setSaving(true);
     const { data: order, error } = await supabase()
-      .from('orders')
+      .from("orders")
       .insert({
         tenant_id: tenant.id,
         items: cart.map(({ key, ...item }) => item),
         total_cents: totalCents,
       })
-      .select('id, paid_at, total_cents')
+      .select("id, paid_at, total_cents")
       .single();
     setSaving(false);
     if (error) {
-      setCheckout({ error: 'Gagal menyimpan pesanan.' });
+      setCheckout({ error: "Gagal menyimpan pesanan." });
       console.error(error);
       return;
     }
@@ -120,131 +117,204 @@ export default function KasirPage() {
     setCheckout(order);
   };
 
-  const fmt = (c) => 'Rp' + (c / 100).toLocaleString('id-ID');
+  const aiLabel = (x) => {
+    if (!x) return "";
+    if (x.tip) return x.tip;
+    if (x.reason) return x.reason;
+    return "Saran: " + (x.intent || "umum");
+  };
 
-  // Ponytail: cloud QRIS render handled in admin; kasir shows static placeholder notice.
+  const kategori = ["Semua", ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
+  const tampil = products.filter(
+    (p) =>
+      (kat === "Semua" || p.category === kat) &&
+      p.name.toLowerCase().includes(q.toLowerCase())
+  );
+
   if (!tenant) {
-    return <div style={{ padding: 24, fontFamily: 'sans-serif' }}>Memeriksa sesi…</div>;
+    return (
+      <main className="page">
+        <p className="muted">Memeriksa sesi...</p>
+      </main>
+    );
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: 24, fontFamily: 'sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <main className="page page-wide kasir-page">
+      <header className="row" style={{ justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <h1 style={{ fontSize: 24, margin: 0 }}>Kasir — {tenant.name}</h1>
-          <p style={{ color: '#666', margin: '4px 0 0' }}>Klik produk untuk menambah ke keranjang.</p>
+          <h1>Kasir - {tenant.name}</h1>
+          <p className="muted">Klik produk untuk menambah ke keranjang.</p>
         </div>
-        <button className="btn btn-sm"
+        <button
+          type="button"
+          className="btn btn-sm"
           onClick={() => {
             clearSession();
-            router.replace('/');
+            router.replace("/");
           }}
-          style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}
         >
           Keluar
         </button>
       </header>
 
-      {ai && (
-        <div style={{ marginTop: 12, border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, background: '#f9fafb', fontSize: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-            <span style={{ color: '#374151' }}>{aiLabel(ai)}</span>
-            <span style={{ color: '#6b7280', fontSize: 12, whiteSpace: 'nowrap' }}>
+      {ai && aiLabel(ai) && (
+        <div className="card" style={{ marginBottom: 16, background: "var(--surface-sunken)" }}>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <span>{aiLabel(ai)}</span>
+            <span className="muted" style={{ whiteSpace: "nowrap" }}>
               {ai.source}
-              {ai.costUsd ? ' - $' + ai.costUsd : ''}
+              {ai.costUsd ? " - $" + ai.costUsd : ""}
             </span>
           </div>
         </div>
       )}
 
-      {loading ? (
-        <p>Memuat produk…</p>
-      ) : products.length === 0 ? (
-        <p style={{ marginTop: 16 }}>Belum ada produk aktif. Kelola produk di panel admin.</p>
-      ) : (
-        <div style={{ display: 'grid', gap: 12, marginTop: 24 }}>
-          {products.map((p) => (
-            <div key={p.id} style={{ border: '1px solid #ddd', borderRadius: 12, padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong>{p.name}</strong>
-                  <div style={{ color: '#666', fontSize: 13 }}>{fmt(p.price_cents)}</div>
-                </div>
-                <button className="btn btn-sm"
-                  onClick={() => addToCart(p, null)}
-                  style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#154c57', color: '#fff', cursor: 'pointer' }}
+      <div className="kasir-grid">
+        {/* ---- daftar produk ---- */}
+        <section>
+          <div className="row" style={{ marginBottom: 12 }}>
+            <input
+              className="field"
+              style={{ maxWidth: 240 }}
+              placeholder="Cari produk..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <div className="row" style={{ gap: 6 }}>
+              {kategori.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => setKat(k)}
+                  style={
+                    kat === k
+                      ? { background: "var(--cta)", color: "#fff", borderColor: "var(--cta)" }
+                      : undefined
+                  }
                 >
-                  + Tanpa Varian
+                  {k}
                 </button>
-              </div>
-              {p.variants?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-                  {p.variants.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => addToCart(p, v)}
-                      style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #154c57', background: '#fff', cursor: 'pointer' }}
-                    >
-                      {v.name} {v.price_delta_cents ? `(+${fmt(v.price_delta_cents)})` : ''}
-                    </button>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-
-      {cart.length > 0 && (
-        <div style={{ marginTop: 32, border: '2px solid #154c57', borderRadius: 12, padding: 16 }}>
-          <h2 style={{ fontSize: 18, margin: '0 0 12px' }}>Keranjang</h2>
-          {cart.map((x) => (
-            <div key={x.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div>
-                {x.product_name}
-                {x.variant_name ? ` — ${x.variant_name}` : ''} × {fmt(x.unit_cents)}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button className="btn btn-sm" onClick={() => setQty(x.key, x.qty - 1)} style={{ width: 28, borderRadius: 6, border: '1px solid #ccc', cursor: 'pointer' }}>−</button>
-                <span style={{ minWidth: 20, textAlign: 'center' }}>{x.qty}</span>
-                <button className="btn btn-sm" onClick={() => setQty(x.key, x.qty + 1)} style={{ width: 28, borderRadius: 6, border: '1px solid #ccc', cursor: 'pointer' }}>+</button>
-              </div>
-            </div>
-          ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: '1px solid #ddd' }}>
-            <strong>Total: {fmt(totalCents)}</strong>
-            <button className="btn btn-sm"
-              onClick={pay}
-              disabled={saving}
-              style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: saving ? '#888' : '#154c57', color: '#fff', cursor: saving ? 'wait' : 'pointer' }}
-            >
-              {saving ? 'Menyimpan…' : 'Bayar'}
-            </button>
           </div>
-          {checkout?.error && <p style={{ color: '#b91c1c', marginBottom: 8 }}>{checkout.error}</p>}
-        </div>
-      )}
+
+          {loading ? (
+            <p className="muted">Memuat produk...</p>
+          ) : tampil.length === 0 ? (
+            <p className="muted">Belum ada produk aktif.</p>
+          ) : (
+            <div className="kotak-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+              {tampil.map((p) => (
+                <div key={p.id} className="card" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 650 }}>{p.name}</div>
+                    <div className="price" style={{ color: "var(--accent)", fontWeight: 650, marginTop: 2 }}>
+                      {fmt(p.price_cents)}
+                    </div>
+                  </div>
+                  <div className="row" style={{ gap: 6, marginTop: "auto" }}>
+                    {p.variants && p.variants.length > 0 ? (
+                      p.variants.map((v) => (
+                        <button
+                          key={v.id}
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() => addToCart(p, v)}
+                        >
+                          {v.name}
+                          {v.price_delta_cents ? " (+" + fmt(v.price_delta_cents) + ")" : ""}
+                        </button>
+                      ))
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => addToCart(p, null)}
+                      >
+                        + Tambah
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ---- keranjang ---- */}
+        <aside className="kasir-keranjang">
+          <div className="card">
+            <h2 style={{ fontSize: 16, marginBottom: 8 }}>Keranjang</h2>
+            {cart.length === 0 ? (
+              <p className="muted">Keranjang masih kosong.</p>
+            ) : (
+              <>
+                <ul className="list">
+                  {cart.map((x) => (
+                    <li key={x.key} className="row" style={{ justifyContent: "space-between" }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{x.product_name}</div>
+                        <div className="muted price">
+                          {x.variant_name ? x.variant_name + " - " : ""}
+                          {fmt(x.unit_cents)} x {x.qty}
+                        </div>
+                      </div>
+                      <div className="row" style={{ gap: 6 }}>
+                        <button
+                          type="button"
+                          className="btn btn-icon"
+                          onClick={() => setQty(x.key, x.qty - 1)}
+                          aria-label="Kurangi"
+                        >
+                          -
+                        </button>
+                        <span className="price" style={{ minWidth: 22, textAlign: "center" }}>
+                          {x.qty}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-icon"
+                          onClick={() => setQty(x.key, x.qty + 1)}
+                          aria-label="Tambah"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div
+                  className="row"
+                  style={{ justifyContent: "space-between", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}
+                >
+                  <strong className="price">Total {fmt(totalCents)}</strong>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={pay}
+                    disabled={saving}
+                  >
+                    {saving ? "Menyimpan..." : "Bayar"}
+                  </button>
+                </div>
+                {checkout?.error && <p className="msg msg-error" style={{ marginTop: 12 }}>{checkout.error}</p>}
+              </>
+            )}
+          </div>
+        </aside>
+      </div>
 
       {checkout && checkout.id && (
-        <div style={{ marginTop: 24, border: '1px solid #ccc', borderRadius: 12, padding: 16, background: '#f4fafb' }}>
+        <div className="card msg-ok" style={{ marginTop: 16 }}>
           <strong>Pesanan #{checkout.id.slice(-6).toUpperCase()} tersimpan.</strong>
-          <div>Total {fmt(checkout.total_cents)}</div>
-          <button className="btn btn-sm" onClick={() => setCheckout(null)} style={{ marginTop: 8, padding: '6px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
+          <div className="price">Total {fmt(checkout.total_cents)}</div>
+          <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setCheckout(null)}>
             Tutup
           </button>
         </div>
       )}
-    </div>
+    </main>
   );
-}
-
-function vkey(pid, vid) {
-  return pid + (vid ? '::' + vid : '');
-}
-
-function aiLabel(ai) {
-  if (ai.tip) return 'Saran AI: ' + ai.tip;
-  if (ai.reason === 'no-key') return 'AI belum aktif. Set OPENAI_API_KEY di .env.local.';
-  if (ai.reason === 'budget') return 'Batas budget AI tercapai, panggilan dilewati.';
-  return 'Panggilan AI gagal (' + (ai.reason || 'error') + '). Kasir tetap normal.';
 }
