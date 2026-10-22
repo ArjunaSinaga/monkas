@@ -36,8 +36,9 @@ export default function AdminPage() {
   const router = useRouter();
   const [siap, setSiap] = useState(false);
   const [adminName, setAdminName] = useState("");
-  const [popup, setPopup] = useState(null); // "tenant" | "pin" | "laporan" | "tutup"
+  const [popup, setPopup] = useState(null); // "tenant" | "pin" | "laporan" | "riwayat" | "tutup"
   const [msg, setMsg] = useState("");
+  const [tenantOrang, setTenantOrang] = useState(null); // tenant yang riwayatnya dibuka
 
   // data
   const [tenants, setTenants] = useState([]);
@@ -69,7 +70,7 @@ export default function AdminPage() {
       setAdminName(s.username || "admin");
       const db = supabase();
       const { data: t } = await db.from("tenants").select("id,name,qris_photo_url,created_at,is_active").order("name");
-      const { data: o } = await db.from("orders").select("id,tenant_id,total_cents,paid_at,voided").order("paid_at", { ascending: false }).limit(500);
+      const { data: o } = await db.from("orders").select("id,tenant_id,items,total_cents,paid_at,voided").order("paid_at", { ascending: false }).limit(500);
       if (batal) return;
       setTenants(t || []);
       setOrders(o || []);
@@ -205,6 +206,16 @@ export default function AdminPage() {
     const omzet = milik.reduce((a, b) => a + (b.total_cents || 0), 0);
     return { tenant: t, jumlah: milik.length, omzet };
   }).filter((r) => r.jumlah > 0);
+
+  // ---------- riwayat tenant ----------
+  const riwayat = tenantOrang
+    ? orders
+        .filter((o) => o.tenant_id === tenantOrang.id)
+        .sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at)))
+    : [];
+
+  const ringkasItem = (items) =>
+    (items || []).map((x) => x.product_name + (x.variant_name ? " " + x.variant_name : "") + (x.qty > 1 ? " x" + x.qty : "")).join(", ");
 
   // ---------- tutup hari ----------
   const hariIni = new Date().toISOString().slice(0, 10);
@@ -417,7 +428,9 @@ export default function AdminPage() {
           <ul className="list">
             {laporan.map((r) => (
               <li key={r.tenant.id} className="row" style={{ justifyContent: "space-between" }}>
-                <span style={{ fontWeight: 600 }}>{r.tenant.name}</span>
+                <button type="button" className="btn btn-sm" onClick={() => { setTenantOrang(r.tenant); setPopup("riwayat"); }}>
+                  {r.tenant.name}
+                </button>
                 <span className="row" style={{ gap: 16 }}>
                   <span className="muted">{r.jumlah} transaksi</span>
                   <span className="price" style={{ fontWeight: 650 }}>{rupiah(r.omzet)}</span>
@@ -427,6 +440,28 @@ export default function AdminPage() {
           </ul>
         )}
         <p className="muted">Total: {rupiah(laporan.reduce((a, b) => a + b.omzet, 0))}</p>
+      </Popup>
+
+      {/* ---------- popup riwayat tenant ---------- */}
+      <Popup open={popup === "riwayat"} judul={"Riwayat: " + (tenantOrang?.name || "")} lebar onClose={() => { setPopup("laporan"); setTenantOrang(null); }}>
+        {riwayat.length === 0 ? (
+          <p className="muted">Belum ada transaksi.</p>
+        ) : (
+          <ul className="list">
+            {riwayat.map((o) => (
+              <li key={o.id}>
+                {o.voided && <span className="muted" style={{ textDecoration: "line-through" }}>{ringkasItem(o.items)}</span>}
+                {!o.voided && <span>{ringkasItem(o.items)}</span>}
+                {(o.voided || null) && <span className="muted" style={{ marginLeft: 4 }}>dibatalkan</span>}
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <span className="muted">{new Date(o.paid_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}</span>
+                  <span className="price">{rupiah(o.total_cents)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="muted">{riwayat.filter((o) => !o.voided).length} transaksi aktif, total {rupiah(riwayat.filter((o) => !o.voided).reduce((a, b) => a + (b.total_cents || 0), 0))}</p>
       </Popup>
 
       {/* ---------- popup tutup hari ---------- */}
