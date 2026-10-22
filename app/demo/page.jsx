@@ -4,7 +4,7 @@
 // Tujuannya: bisa dicek di Vercel (preview ke merchant) sebelum project live siap.
 // Route: /demo
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const TENANT = { id: "demo", name: "Kopi Senja" };
 
@@ -38,6 +38,8 @@ export default function DemoKasir() {
   const [paid, setPaid] = useState(0);
   const [done, setDone] = useState(null);
   const [query, setQuery] = useState("");
+  const [popId, setPopId] = useState(null);
+  const popTimer = useRef(null);
 
   const cats = ["Semua", ...Array.from(new Set(PRODUCTS.map((p) => p.category)))];
   const list = PRODUCTS.filter(
@@ -49,6 +51,9 @@ export default function DemoKasir() {
 
   function add(p, v) {
     const key = p.id + "-" + v.id;
+    setPopId(p.id);
+    clearTimeout(popTimer.current);
+    popTimer.current = setTimeout(() => setPopId(null), 300);
     setCart((c) => {
       const found = c.find((x) => x.key === key);
       if (found) return c.map((x) => (x.key === key ? { ...x, qty: x.qty + 1 } : x));
@@ -101,7 +106,7 @@ export default function DemoKasir() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16, alignItems: "start" }}>
           <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
             {list.map((p) => (
-              <div key={p.id} style={{ background: "#fff", border: "1px solid #e8e0cf", borderRadius: 12, padding: 12 }}>
+              <div key={p.id} className={"menu-card" + (popId === p.id ? " menu-card-pop" : "")} style={{ background: "#fff", border: "1px solid #e8e0cf", borderRadius: 12, padding: 12 }}>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</div>
                 <div style={{ color: "#9a6a2f", fontWeight: 600, margin: "4px 0 8px" }}>{rupiah(p.price_cents)}</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -126,7 +131,7 @@ export default function DemoKasir() {
             <h2 style={{ margin: "0 0 8px", fontSize: 16 }}>Struk</h2>
             {cart.length === 0 && <div style={{ color: "#6f6252", fontSize: 14 }}>Keranjang masih kosong.</div>}
             {cart.map((it) => (
-              <div key={it.key} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", borderBottom: "1px solid #f0ebe0", fontSize: 14 }}>
+              <div key={it.key} className="baris-keranjang" style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", borderBottom: "1px solid #f0ebe0", fontSize: 14 }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{it.product_name}</div>
                   <div style={{ color: "#6f6252" }}>{it.variant_name} x{it.qty} - {rupiah(it.price_cents * it.qty)}</div>

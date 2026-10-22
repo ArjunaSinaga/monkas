@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { getSession, clearSession } from "../../lib/pin";
@@ -16,6 +16,8 @@ export default function KasirPage() {
   const [ai, setAi] = useState(null);
   const [q, setQ] = useState("");
   const [kat, setKat] = useState("Semua");
+  const [popId, setPopId] = useState(null);
+  const popTimer = useRef(null);
 
   useEffect(() => {
     const s = getSession();
@@ -64,6 +66,9 @@ export default function KasirPage() {
 
   const addToCart = (product, variant) => {
     const key = vkey(product.id, variant?.id);
+    setPopId(product.id);
+    clearTimeout(popTimer.current);
+    popTimer.current = setTimeout(() => setPopId(null), 300);
     setCart((c) => {
       const i = c.findIndex((x) => x.key === key);
       if (i >= 0) {
@@ -207,7 +212,7 @@ export default function KasirPage() {
           ) : (
             <div className="kotak-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
               {tampil.map((p) => (
-                <div key={p.id} className="card" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div key={p.id} className={"card menu-card" + (popId === p.id ? " menu-card-pop" : "")} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div>
                     <div style={{ fontWeight: 650 }}>{p.name}</div>
                     <div className="price" style={{ color: "var(--accent)", fontWeight: 650, marginTop: 2 }}>
@@ -253,7 +258,7 @@ export default function KasirPage() {
               <>
                 <ul className="list">
                   {cart.map((x) => (
-                    <li key={x.key} className="row" style={{ justifyContent: "space-between" }}>
+                    <li key={x.key} className="row baris-keranjang" style={{ justifyContent: "space-between" }}>
                       <div>
                         <div style={{ fontWeight: 600 }}>{x.product_name}</div>
                         <div className="muted price">
