@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -21,19 +21,25 @@ export default function KasirPage() {
 
   useEffect(() => {
     const s = getSession();
-    if (!s) {
+    if (!s || !s.tenant_id) {
       router.replace("/");
       return;
     }
     (async () => {
       // setState di dalam callback async (aturan react-hooks/set-state-in-effect Next 16)
       setTenant(s);
-      const { data, error } = await supabase()
-        .from("products")
-        .select("id, name, price_cents, is_active, variants(id, name, price_delta_cents)")
-        .eq("tenant_id", s.id)
-        .eq("is_active", true)
-        .order("name");
+      const [{ data: t }, { data, error }] = await Promise.all([
+        supabase().from("tenants").select("qris_photo_url").eq("id", s.tenant_id).maybeSingle(),
+        supabase()
+          .from("products")
+          .select("id, name, category, price_cents, is_active, variants(id, name, price_delta_cents)")
+          .eq("tenant_id", s.tenant_id)
+          .eq("is_active", true)
+          .order("name"),
+      ]);
+      if (t?.qris_photo_url) {
+        setTenant((prev) => ({ ...prev, qris_photo_url: t.qris_photo_url }));
+      }
       if (!error && data) setProducts(data);
       setLoading(false);
     })();
@@ -48,7 +54,7 @@ export default function KasirPage() {
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const qs = new URLSearchParams({ intent: "kasir", tenant: tenant.name || "", items });
+        const qs = new URLSearchParams({ intent: "kasir", tenant: tenant.tenant_name || "", items });
         const res = await fetch("/api/ai?" + qs.toString(), { signal: controller.signal });
         if (!res.ok) return;
         setAi(await res.json());
@@ -106,7 +112,7 @@ export default function KasirPage() {
     const { data: order, error } = await supabase()
       .from("orders")
       .insert({
-        tenant_id: tenant.id,
+        tenant_id: tenant.tenant_id,
         items: cart.map(({ key, ...item }) => item),
         total_cents: totalCents,
       })
@@ -148,7 +154,7 @@ export default function KasirPage() {
     <main className="page page-wide kasir-page">
       <header className="row" style={{ justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <h1>Kasir - {tenant.name}</h1>
+          <h1>Kasir - {tenant.tenant_name}</h1>
           <p className="muted">Klik produk untuk menambah ke keranjang.</p>
         </div>
         <button
@@ -315,6 +321,18 @@ export default function KasirPage() {
         <div className="card msg-ok" style={{ marginTop: 16 }}>
           <strong>Pesanan #{checkout.id.slice(-6).toUpperCase()} tersimpan.</strong>
           <div className="price">Total {fmt(checkout.total_cents)}</div>
+          {tenant.qris_photo_url ? (
+            <div>
+              <img
+                src={tenant.qris_photo_url}
+                alt="QRIS pembayaran"
+                style={{ maxWidth: 220, maxHeight: 220, objectFit: "contain", border: "1px solid var(--border)", borderRadius: 8 }}
+              />
+              <p className="muted">Tampilkan QRIS ini ke pelanggan, lalu konfirmasi pembayaran.</p>
+            </div>
+          ) : (
+            <p className="muted">QRIS tenant belum terpasang.</p>
+          )}
           <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setCheckout(null)}>
             Tutup
           </button>

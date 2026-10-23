@@ -218,13 +218,22 @@ export default function AdminPage() {
     (items || []).map((x) => x.product_name + (x.variant_name ? " " + x.variant_name : "") + (x.qty > 1 ? " x" + x.qty : "")).join(", ");
 
   // ---------- tutup hari ----------
-  const hariIni = new Date().toISOString().slice(0, 10);
-  const hariIniOrders = orders.filter((o) => !o.voided && String(o.paid_at).slice(0, 10) === hariIni);
+  // WIB (UTC+7): paid_at disimpan UTC, jadi geser +7 jam sebelum ambil tanggalnya.
+  const wib = (iso) => new Date(new Date(iso).getTime() + 7 * 3600e3);
+  const hariIni = wib(new Date().toISOString()).toISOString().slice(0, 10);
+  const hariIniOrders = orders.filter((o) => !o.voided && wib(o.paid_at).toISOString().slice(0, 10) === hariIni);
   const omzetHariIni = hariIniOrders.reduce((a, b) => a + (b.total_cents || 0), 0);
 
   function exportCsv() {
+    // CSV "Tutup Hari" hanya berisi transaksi hari ini (bukan semua riwayat), agar rekap benar.
     const header = "tanggal,tenant,transaksi,omzet\n";
-    const baris = laporan.map((r) => [hariIni, r.tenant.name, r.jumlah, r.omzet].join(",")).join("\n");
+    const rekap = tenants
+      .map((t) => {
+        const milik = hariIniOrders.filter((o) => o.tenant_id === t.id);
+        return { name: t.name, jumlah: milik.length, omzet: milik.reduce((a, b) => a + (b.total_cents || 0), 0) };
+      })
+      .filter((r) => r.jumlah > 0);
+    const baris = rekap.map((r) => [hariIni, r.name, r.jumlah, r.omzet].join(",")).join("\n");
     const blob = new Blob([header + baris], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -453,6 +462,25 @@ export default function AdminPage() {
                 {o.voided && <span className="muted" style={{ textDecoration: "line-through" }}>{ringkasItem(o.items)}</span>}
                 {!o.voided && <span>{ringkasItem(o.items)}</span>}
                 {(o.voided || null) && <span className="muted" style={{ marginLeft: 4 }}>dibatalkan</span>}
+                {!o.voided && (
+                  <span className="muted" style={{ marginLeft: 8 }}>
+                    {riwayat.length < 100 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={async () => {
+                          if (!window.confirm(`Batalkan (void) pesanan ${o.id.slice(-6).toUpperCase()}?`)) return;
+                          const { error: err } = await db.from("orders").update({ voided: true }).eq("id", o.id);
+                          if (err) { setMsg("Void gagal."); return; }
+                          setMsg("Pesanan dibatalkan");
+                          setOrders((prev) => prev.map((x) => (x.id === o.id ? { ...x, voided: true } : x)));
+                        }}
+                      >
+                        Void
+                      </button>
+                    )}
+                  </span>
+                )}
                 <div className="row" style={{ justifyContent: "space-between" }}>
                   <span className="muted">{new Date(o.paid_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}</span>
                   <span className="price">{rupiah(o.total_cents)}</span>
