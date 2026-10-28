@@ -136,22 +136,26 @@ export default function AdminPage() {
       return;
     }
     const db = supabase();
-    const { data: adm } = await db
-      .from("admins")
-      .select("id,password_hash")
-      .eq("username", adminName)
-      .maybeSingle();
-    if (!adm) { setMsg("Akun admin tidak ditemukan."); return; }
     const hash = await hashPassword(konPin.trim());
-    if (hash !== adm.password_hash) {
-      setMsg("PIN admin salah.");
-      return;
-    }
-    const { error } = await db
-      .from("tenants")
-      .update({ is_active: false, deleted_at: new Date().toISOString() })
-      .eq("id", t.id);
-    if (error) { setMsg("Gagal: " + error.message); return; }
+    const { data: okNonaktif, error: rpcErr } = await db.rpc("monkas_admin_set_tenant_active", {
+      p_username: adminName,
+      p_admin_hash: hash,
+      p_tenant: t.id,
+      p_active: false,
+    });
+    if (rpcErr) {
+      // Migrasi 005 belum diterapkan: jalur lama
+      if (!/Could not find the function|does not exist/i.test(rpcErr.message || "")) {
+        setMsg("Gagal: " + rpcErr.message); return;
+      }
+      const { data: adm } = await db.from("admins").select("id,password_hash").eq("username", adminName).maybeSingle();
+      if (!adm) { setMsg("Akun admin tidak ditemukan."); return; }
+      if (hash !== adm.password_hash) { setMsg("PIN admin salah."); return; }
+      const { error } = await db.from("tenants")
+        .update({ is_active: false, deleted_at: new Date().toISOString() })
+        .eq("id", t.id);
+      if (error) { setMsg("Gagal: " + error.message); return; }
+    } else if (!okNonaktif) { setMsg("PIN admin salah."); return; }
     setKonfirmasi(null);
     setKonNama("");
     setKonPin("");
@@ -173,11 +177,27 @@ export default function AdminPage() {
 
   // ---------- reset PIN tenant ----------
   async function resetPinTenant(t) {
+    const adminPin = window.prompt("PIN admin untuk konfirmasi reset PIN tenant '" + t.name + "':");
+    if (!adminPin) return;
     const baru = String(Math.floor(100000 + Math.random() * 900000));
     const h = await hashPin(baru);
+    const adminHash = await hashPassword(adminPin.trim());
     const db = supabase();
-    const { error } = await db.from("tenants").update({ pin_hash: h }).eq("id", t.id);
-    if (error) { setMsg("Gagal: " + error.message); return; }
+    const { data: ok, error } = await db.rpc("monkas_admin_set_tenant_pin", {
+      p_username: adminName,
+      p_admin_hash: adminHash,
+      p_tenant: t.id,
+      p_new_hash: h,
+    });
+    if (error) {
+      if (!/Could not find the function|does not exist/i.test(error.message || "")) {
+        setMsg("Gagal: " + error.message); return;
+      }
+      const { data: adm } = await db.from("admins").select("id,password_hash").eq("username", adminName).maybeSingle();
+      if (!adm || adm.password_hash !== adminHash) { setMsg("PIN admin salah."); return; }
+      const { error: e2 } = await db.from("tenants").update({ pin_hash: h }).eq("id", t.id);
+      if (e2) { setMsg("Gagal: " + e2.message); return; }
+    } else if (!ok) { setMsg("PIN admin salah."); return; }
     setMsg("PIN baru tenant '" + t.name + "': " + baru + " (tidak bisa dibaca lagi, catat sekarang).");
     await muatTenant();
   }
@@ -189,13 +209,23 @@ export default function AdminPage() {
     if (err) { setMsg(err); return; }
     if (newPw !== newPw2) { setMsg("Konfirmasi PIN tidak sama."); return; }
     const db = supabase();
-    const { data: adm } = await db.from("admins").select("id,password_hash").eq("username", adminName).maybeSingle();
-    if (!adm) { setMsg("Akun admin tidak ditemukan."); return; }
     const cur = await hashPassword(curPw);
-    if (cur !== adm.password_hash) { setMsg("PIN lama salah."); return; }
     const nh = await hashPassword(newPw);
-    const { error } = await db.from("admins").update({ password_hash: nh }).eq("id", adm.id);
-    if (error) { setMsg("Gagal: " + error.message); return; }
+    const { data: ok, error } = await db.rpc("monkas_admin_set_password", {
+      p_username: adminName,
+      p_old_hash: cur,
+      p_new_hash: nh,
+    });
+    if (error) {
+      if (!/Could not find the function|does not exist/i.test(error.message || "")) {
+        setMsg("Gagal: " + error.message); return;
+      }
+      const { data: adm } = await db.from("admins").select("id,password_hash").eq("username", adminName).maybeSingle();
+      if (!adm) { setMsg("Akun admin tidak ditemukan."); return; }
+      if (cur !== adm.password_hash) { setMsg("PIN lama salah."); return; }
+      const { error: e2 } = await db.from("admins").update({ password_hash: nh }).eq("id", adm.id);
+      if (e2) { setMsg("Gagal: " + e2.message); return; }
+    } else if (!ok) { setMsg("PIN lama salah."); return; }
     setCurPw(""); setNewPw(""); setNewPw2("");
     setMsg("PIN admin diganti. Pakai PIN baru di login berikutnya.");
   }

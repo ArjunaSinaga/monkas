@@ -9,6 +9,18 @@ const FAIL_KEY = "monkas_login_fail";
 const MAX_FAIL = 5;
 const LOCK_MS = 5 * 60 * 1000;
 
+// Panggil RPC verifikasi; kalau migrasi 005 belum diterapkan, pakai query lama.
+async function cariBaris(db, fn, args, fallback) {
+  const { data, error } = await db.rpc(fn, args);
+  if (!error) return data?.[0] || null;
+  if (/Could not find the function|does not exist/i.test(error.message || "")) {
+    const { data: old, error: oldErr } = await fallback();
+    if (oldErr) throw oldErr;
+    return old || null;
+  }
+  throw error;
+}
+
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
@@ -55,14 +67,11 @@ export default function LoginPage() {
 
       // 1. Admin? (username admin + PIN 6 angka)
       const ah = await hashPassword(pin);
-      const { data: admin, error: aErr } = await db
-        .from("admins")
-        .select("id,username")
-        .eq("username", name)
-        .eq("password_hash", ah)
-        .limit(1)
-        .maybeSingle();
-      if (aErr) throw aErr;
+      const admin = await cariBaris(db, "monkas_login_admin", {
+        p_username: name,
+        p_hash: ah,
+      }, () => db.from("admins").select("id,username")
+        .eq("username", name).eq("password_hash", ah).limit(1).maybeSingle());
       if (admin) {
         try { localStorage.removeItem(FAIL_KEY); } catch {}
         setAdminSession({ admin_id: admin.id, username: admin.username, login_at: Date.now() });
@@ -72,14 +81,11 @@ export default function LoginPage() {
 
       // 2. Tenant? (nama tenant + PIN)
       const ph = await hashPin(pin);
-      const { data: tenant, error: tErr } = await db
-        .from("tenants")
-        .select("id,name")
-        .eq("name", name)
-        .eq("pin_hash", ph)
-        .limit(1)
-        .maybeSingle();
-      if (tErr) throw tErr;
+      const tenant = await cariBaris(db, "monkas_login_tenant", {
+        p_name: name,
+        p_hash: ph,
+      }, () => db.from("tenants").select("id,name")
+        .eq("name", name).eq("pin_hash", ph).limit(1).maybeSingle());
       if (!tenant) {
         noteFail();
         setError("Username atau PIN salah.");
